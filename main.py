@@ -1,75 +1,12 @@
 
-import json
 import math
 
-from product import Product
+from database.db import init_db
+from services import product_service as service
 
 
-# ==============================
-# 一、读取商品数据
-# ==============================
-
-def load_products():
-    try:
-        with open("products.json", "r", encoding="utf-8") as file:
-            data = json.load(file)
-
-        return [Product.from_dict(item) for item in data]
-
-    except FileNotFoundError:
-        print("商品数据文件不存在，将创建空商品列表")
-        return []
-
-    except json.JSONDecodeError:
-        print("商品数据文件格式错误，请检查 products.json")
-        return []
-
-    except OSError as e:
-        print(f"读取文件失败：{e}")
-        return []
-
-
-# ==============================
-# 二、保存商品数据
-# ==============================
-
-def save_products():
-    data = [product.to_dict() for product in products]
-
-    try:
-        with open("products.json", "w", encoding="utf-8") as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-
-    except OSError as e:
-        print(f"保存文件失败：{e}")
-
-
-# ==============================
-# 三、输入校验
-# ==============================
-
-# 获取非负价格
-def get_non_negative_float(prompt):
-    while True:
-        try:
-            value = float(input(prompt))
-
-            if not math.isfinite(value):
-                print("请输入正常的有限数字")
-                continue
-
-            if value < 0:
-                print("不能输入负数")
-                continue
-
-            return value
-
-        except ValueError:
-            print("请输入有效数字")
-
-
-# 获取非负整数
-def get_non_negative_int(prompt):
+# 输入非负整数
+def get_int(prompt):
     while True:
         try:
             value = int(input(prompt))
@@ -84,18 +21,26 @@ def get_non_negative_int(prompt):
             print("请输入整数")
 
 
-# ==============================
-# 四、初始化商品列表
-# ==============================
+# 输入非负价格
+def get_price(prompt):
+    while True:
+        try:
+            value = float(input(prompt))
 
-products = load_products()
+            if not math.isfinite(value) or value < 0:
+                print("请输入合法的非负价格")
+                continue
+
+            return value
+
+        except ValueError:
+            print("请输入有效数字")
 
 
-# ==============================
-# 五、查看商品
-# ==============================
-
+# 查看商品
 def show_products():
+    products = service.get_products()
+
     print("\n===== 商品列表 =====")
 
     if not products:
@@ -106,105 +51,74 @@ def show_products():
         product.show()
 
 
-# ==============================
-# 六、添加商品
-# ==============================
-
+# 添加商品
 def add_product():
     name = input("商品名称：").strip()
 
-    if not name:
-        print("商品名称不能为空")
-        return
+    price = get_price("商品价格：")
+    stock = get_int("商品库存：")
 
-    price = get_non_negative_float("商品价格：")
-    stock = get_non_negative_int("商品库存：")
+    try:
+        product_id = service.add_product(name, price, stock)
 
-    products.append(Product(name, price, stock))
+        print(f"添加成功，商品编号：{product_id}")
 
-    save_products()
-
-    print("商品添加成功！")
+    except ValueError as e:
+        print(f"添加失败：{e}")
 
 
-# ==============================
-# 七、删除商品
-# ==============================
-
-def delete_product():
-    name = input("请输入要删除的商品名称：").strip()
-
-    for product in products:
-        if product.name == name:
-            products.remove(product)
-
-            save_products()
-
-            print("删除成功！")
-            return
-
-    print("商品不存在！")
-
-
-# ==============================
-# 八、修改商品价格
-# ==============================
-
+# 修改商品价格
 def update_price():
-    name = input("请输入商品名称：").strip()
+    product_id = get_int("请输入商品编号：")
+    price = get_price("请输入新价格：")
 
-    for product in products:
-        if product.name == name:
-            new_price = get_non_negative_float("请输入新价格：")
+    try:
+        service.change_price(product_id, price)
 
-            product.price = new_price
+        print("修改成功！")
 
-            save_products()
-
-            print("修改成功！")
-            return
-
-    print("商品不存在！")
+    except ValueError as e:
+        print(f"修改失败：{e}")
 
 
-# ==============================
-# 九、商品销售
-# ==============================
+# 删除商品
+def delete_product():
+    product_id = get_int("请输入商品编号：")
 
+    try:
+        service.remove_product(product_id)
+
+        print("删除成功！")
+
+    except ValueError as e:
+        print(f"删除失败：{e}")
+
+
+# 销售商品
 def sell_product():
-    name = input("请输入商品名称：").strip()
+    product_id = get_int("请输入商品编号：")
+    quantity = get_int("请输入销售数量：")
 
-    for product in products:
-        if product.name == name:
-            quantity = get_non_negative_int("请输入销售数量：")
+    try:
+        stock = service.sell_product(product_id, quantity)
 
-            if quantity == 0:
-                print("销售数量必须大于 0")
-                return
+        print(f"销售成功，剩余库存：{stock}")
 
-            old_stock = product.stock
-
-            product.sell(quantity)
-
-            if product.stock != old_stock:
-                save_products()
-
-            return
-
-    print("商品不存在！")
+    except ValueError as e:
+        print(f"销售失败：{e}")
 
 
-# ==============================
-# 十、主菜单
-# ==============================
-
+# 主菜单
 def main():
+
+    init_db()
+
     while True:
         print("\n========== 商品管理系统 ==========")
         print("1. 查看商品")
         print("2. 添加商品")
-        print("3. 删除商品")
-        print("4. 修改商品价格")
+        print("3. 修改商品价格")
+        print("4. 删除商品")
         print("5. 商品销售")
         print("0. 退出系统")
 
@@ -217,10 +131,10 @@ def main():
             add_product()
 
         elif choice == "3":
-            delete_product()
+            update_price()
 
         elif choice == "4":
-            update_price()
+            delete_product()
 
         elif choice == "5":
             sell_product()
@@ -230,12 +144,8 @@ def main():
             break
 
         else:
-            print("无效选择，请重新输入！")
+            print("无效选择！")
 
-
-# ==============================
-# 十一、程序入口
-# ==============================
 
 if __name__ == "__main__":
     main()
