@@ -1,4 +1,4 @@
-
+# 负责定义商品对象
 class Product:
 
     def __init__(self, id, name, price, stock):

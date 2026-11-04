@@ -1,4 +1,4 @@
-
+# 负责所有商品数据库操作
 from database.db import get_connection
 from models.product import Product
 

@@ -1,4 +1,4 @@
-
+# 负责接收用户输入、展示菜单和调用业务层
 import math
 
 from database.db import init_db

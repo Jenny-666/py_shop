@@ -1,4 +1,4 @@
-
+# 负责商品业务规则
 import math
 
 from repositories import product_repository as repo
