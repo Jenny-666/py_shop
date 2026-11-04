@@ -10,7 +10,9 @@ def get_all():
     try:
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM products")
+        cursor.execute(
+            "SELECT * FROM products ORDER BY id DESC"
+        )
 
         rows = cursor.fetchall()
 
@@ -73,27 +75,34 @@ def create(name, price, stock):
 
         conn.commit()
 
-        return cursor.lastrowid
+        return get_by_id(cursor.lastrowid)
 
     finally:
         conn.close()
 
 
-# 修改商品价格
-def update_price(product_id, price):
+# 修改商品
+def update(product_id, name, price, stock):
     conn = get_connection()
 
     try:
         cursor = conn.cursor()
 
         cursor.execute(
-            "UPDATE products SET price = ? WHERE id = ?",
-            (price, product_id)
+            """
+            UPDATE products
+            SET name = ?, price = ?, stock = ?
+            WHERE id = ?
+            """,
+            (name, price, stock, product_id)
         )
 
         conn.commit()
 
-        return cursor.rowcount > 0
+        if cursor.rowcount == 0:
+            return None
+
+        return get_by_id(product_id)
 
     finally:
         conn.close()
@@ -109,26 +118,6 @@ def delete(product_id):
         cursor.execute(
             "DELETE FROM products WHERE id = ?",
             (product_id,)
-        )
-
-        conn.commit()
-
-        return cursor.rowcount > 0
-
-    finally:
-        conn.close()
-
-
-# 修改库存
-def update_stock(product_id, stock):
-    conn = get_connection()
-
-    try:
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "UPDATE products SET stock = ? WHERE id = ?",
-            (stock, product_id)
         )
 
         conn.commit()
