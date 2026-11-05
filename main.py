@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from database.db import init_db
 from api.product import router as product_router
@@ -27,6 +28,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# 配置跨域
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 # 注册商品路由
 app.include_router(product_router)
